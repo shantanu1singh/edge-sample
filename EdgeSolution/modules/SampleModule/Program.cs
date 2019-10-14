@@ -10,6 +10,7 @@ namespace SampleModule
     using System.Threading.Tasks;
     using Microsoft.Azure.Devices.Client;
     using Microsoft.Azure.Devices.Client.Transport.Mqtt;
+    using Microsoft.Azure.Devices.Shared;
 
     class Program
     {
@@ -50,48 +51,14 @@ namespace SampleModule
             ITransportSettings[] settings = { mqttSetting };
 
             // Open a connection to the Edge runtime
-            moduleClient = await ModuleClient.CreateFromEnvironmentAsync(settings);
+            
+            moduleClient = ModuleClient.CreateFromConnectionString("");
             moduleClient.SetConnectionStatusChangesHandler(OnConnectionStatusChanged);
             await moduleClient.OpenAsync();
             Console.WriteLine("IoT Hub module client initialized.");
 
             timer = new Timer(new TimerCallback(Program.SendEvent), null, 5000 /*dueTime*/, 5000 /*period*/);
-
-            // Register callback to be called when a message is received by the module
-            // await ioTHubModuleClient.SetInputMessageHandlerAsync("input1", PipeMessage, ioTHubModuleClient);
         }
-
-        /// <summary>
-        /// This method is called whenever the module is sent a message from the EdgeHub. 
-        /// It just pipe the messages without any change.
-        /// It prints all the incoming messages.
-        /// </summary>
-        // static async Task<MessageResponse> PipeMessage(Message message, object userContext)
-        // {
-        //     int counterValue = Interlocked.Increment(ref counter);
-
-        //     var moduleClient = userContext as ModuleClient;
-        //     if (moduleClient == null)
-        //     {
-        //         throw new InvalidOperationException("UserContext doesn't contain " + "expected values");
-        //     }
-
-        //     byte[] messageBytes = message.GetBytes();
-        //     string messageString = Encoding.UTF8.GetString(messageBytes);
-        //     Console.WriteLine($"Received message: {counterValue}, Body: [{messageString}]");
-
-        //     if (!string.IsNullOrEmpty(messageString))
-        //     {
-        //         var pipeMessage = new Message(messageBytes);
-        //         foreach (var prop in message.Properties)
-        //         {
-        //             pipeMessage.Properties.Add(prop.Key, prop.Value);
-        //         }
-        //         await moduleClient.SendEventAsync("output1", pipeMessage);
-        //         Console.WriteLine("Received message sent");
-        //     }
-        //     return MessageResponse.Completed;
-        // }
 
         private static void SendEvent(object stateInfo)
         {
@@ -99,6 +66,8 @@ namespace SampleModule
             {   
                     Console.WriteLine("Sending event.");
                     moduleClient.SendEventAsync("telemetry", new Message(Encoding.UTF8.GetBytes("abc")));
+
+                    Twin t = moduleClient.GetTwinAsync().Result;
             }
             catch (Exception exception)
             {
@@ -111,8 +80,8 @@ namespace SampleModule
         {
             try
             {
-                Console.WriteLine("$ConnectionStatus:{status}");
-                Console.WriteLine("$ConnectionStatusChangeReason:{reason}");
+                Console.WriteLine($"ConnectionStatus:{status}");
+                Console.WriteLine($"ConnectionStatusChangeReason:{reason}");
             }
             catch (Exception ex)
             {
