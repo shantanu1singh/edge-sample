@@ -400,8 +400,22 @@ iothub_module()
 	IOTHUB_MODULE_CLIENT_LL_HANDLE client_handle;
 	IOTHUB_CLIENT_RESULT res;
 	static int startup;
+	static int interval_us_val;
 	struct timeval now;
-	int nextping_secs;
+
+    const char* interval_us;
+
+    if ((interval_us = getenv("INTERVAL_IN_US")) != NULL)
+    {
+        interval_us_val = atoi(interval_us);
+    }
+	else
+	{
+		interval_us_val = 1000000;
+	}
+
+	logmsg("send ping interval %d\n", interval_us_val);
+	int nextping_usecs;
 
 	client_handle = IoTHubModuleClient_LL_CreateFromEnvironment(MQTT_Protocol);
 	if (client_handle == NULL) {
@@ -420,7 +434,7 @@ iothub_module()
 
 	// if (g_startping) {
 		gettimeofday(&now, NULL);
-		nextping_secs = now.tv_sec + 1;
+		nextping_usecs = now.tv_usec + interval_us_val;
 
 		res = send_ping(client_handle);
 		if (res != IOTHUB_CLIENT_OK) {
@@ -458,8 +472,8 @@ iothub_module()
 			}
 			gettimeofday(&now, NULL);
 
-			if (now.tv_sec >= nextping_secs) {
-				nextping_secs = now.tv_sec + 1;
+			if (now.tv_usec >= nextping_usecs) {
+				nextping_usecs = now.tv_usec + interval_us_val;
 
 				res = send_ping(client_handle);
 				if (res != IOTHUB_CLIENT_OK) {
