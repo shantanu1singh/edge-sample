@@ -434,7 +434,7 @@ iothub_module()
 
 	// if (g_startping) {
 		gettimeofday(&now, NULL);
-		nextping_usecs = now.tv_usec + interval_us_val;
+		nextping_usecs = (now.tv_sec * 1000000) + now.tv_usec + interval_us_val;
 
 		res = send_ping(client_handle);
 		if (res != IOTHUB_CLIENT_OK) {
@@ -472,8 +472,9 @@ iothub_module()
 			}
 			gettimeofday(&now, NULL);
 
-			if (now.tv_usec >= nextping_usecs) {
-				nextping_usecs = now.tv_usec + interval_us_val;
+			int cur_time_us = (now.tv_sec * 1000000) + now.tv_usec;
+			if (cur_time_us >= nextping_usecs) {
+				nextping_usecs = cur_time_us + interval_us_val;
 
 				res = send_ping(client_handle);
 				if (res != IOTHUB_CLIENT_OK) {
