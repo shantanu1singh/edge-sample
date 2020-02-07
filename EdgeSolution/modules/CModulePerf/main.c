@@ -364,7 +364,7 @@ send_ping(IOTHUB_MODULE_CLIENT_LL_HANDLE client_handle)
 	static int msgcnt;
 	struct timeval now;
 
-	if(msgcnt > 10000)
+	if(msgcnt > 9999)
 	{
 		logmsg("all messages sent");
 		return IOTHUB_CLIENT_OK;
