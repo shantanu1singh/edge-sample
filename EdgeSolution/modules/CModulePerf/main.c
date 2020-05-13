@@ -2,23 +2,6 @@
 // Licensed under the MIT license. See LICENSE file in the project root
 // for full license information.
 //
-// The goal of this example is simplicity and stupidity; it is based on
-// the sample template from Visual Studio and the SDK
-// devicemethod_simplesample.c
-//
-// This is a module that receives input on 'input1' queme from the IoTEdgeHub
-// and forwards it out it's 'output1' queue. The module that receives it is
-// dictated by the routing in the deployment manifest.
-//
-// The deployment manifest routing table creates a circular wheel; the input of
-// module_n is sent to module_n+1.
-//
-// One module (the first, for simplicity) will send a ping, once a second. When the
-// message is received by the ping module, the circle is complete, and the message
-// is not sent around the circle again. To exercise logging, the ping module will
-// send the received message upstream. This is to facilitate smoke testing and
-// log retrieval.
-//
 #include <stdio.h>
 #include <stdlib.h>
 #include <unistd.h>
@@ -163,28 +146,6 @@ send_callback(IOTHUB_CLIENT_CONFIRMATION_RESULT result,
 	free(msg);
 }
 
-// static struct iotmsg *
-// clone_msg(IOTHUB_MESSAGE_HANDLE recv_msghandle, struct iotmsg *recv_msg)
-// {
-// 	struct iotmsg *msg;
-
-// 	msg = (struct iotmsg *)malloc(sizeof(struct iotmsg));
-// 	if (msg) {
-// 		memset(msg, 0, sizeof(*msg));
-
-// 		msg->handle = IoTHubMessage_Clone(recv_msghandle);
-// 		if (msg->handle && recv_msg) {
-// 			msg->ts.id = recv_msg->ts.id;
-// 			msg->ts.secs = recv_msg->ts.secs;
-// 			msg->ts.usecs = recv_msg->ts.usecs;
-// 		} else {
-// 			free(msg);
-// 			msg = NULL;
-// 		}
-// 	}
-// 	return msg;
-// }
-
 static IOTHUB_CLIENT_RESULT
 send_msg(IOTHUB_MODULE_CLIENT_LL_HANDLE client_handle,
 	 IOTHUB_MESSAGE_HANDLE msg_handle,
@@ -197,106 +158,6 @@ send_msg(IOTHUB_MODULE_CLIENT_LL_HANDLE client_handle,
 							    send_callback,
 							    msg);
 }
-
-
-// static IOTHUB_CLIENT_RESULT
-// send_iotmsg(IOTHUB_MODULE_CLIENT_LL_HANDLE client_handle,
-// 	 IOTHUB_MESSAGE_HANDLE msg_handle,
-// 	 const char *outputq,
-// 	 struct iotmsg *msg)
-// {
-// 	IOTHUB_CLIENT_RESULT send_result;
-// 	IOTHUBMESSAGE_DISPOSITION_RESULT result;
-
-// 	send_result = send_msg(client_handle, msg->handle, outputq,
-// 			       (void *)msg);
-// 	if (send_result != IOTHUB_CLIENT_OK) {
-
-// 		logmsg("sending message %d failed result %d\n",
-// 				msg->ts.id, send_result);
-// 		result = IOTHUBMESSAGE_ABANDONED;
-
-// 		IoTHubMessage_Destroy(msg->handle);
-// 		free(msg);
-// 	} else {
-// 		result = IOTHUBMESSAGE_ACCEPTED;
-// 	}
-// 	return result;
-// }
-
-
-// /*
-//  * Forward a message on to the next module in the chain, as per the
-//  * routing in the deployment manifest
-//  */
-// static IOTHUBMESSAGE_DISPOSITION_RESULT
-// forward_msg(IOTHUB_MODULE_CLIENT_LL_HANDLE client_handle,
-// 	    IOTHUB_MESSAGE_HANDLE recv_msghandle,
-// 	    struct iotmsg *recv_msg,
-// 	    char *outputq)
-// {
-// 	struct iotmsg *msg;
-// 	IOTHUBMESSAGE_DISPOSITION_RESULT result;
-// 	static int startup;
-
-// 	/*
-// 	 * We want to time how long it takes the first message
-// 	 * to receive the 'send done' callback. Only module
-// 	 * sends out a ping, so for all the others, record the
-// 	 * first time they send a message to the hub
-// 	 */
-// 	if (startup == 0) {
-// 		gettimeofday(&g_starttime, NULL);
-// 		startup++;
-// 	}
-
-// 	/*
-// 	 * The cloned message will be freed by the send callback
-// 	 */
-// 	msg = clone_msg(recv_msghandle, recv_msg);
-// 	if (msg) {
-// 		logmsg("forwarding message id %d to the next stage in pipeline\n",
-// 			recv_msg->ts.id);
-
-// 		result = send_iotmsg(client_handle, msg->handle, outputq,
-// 			       		(void *)msg);
-// 	} else {
-// 		result = IOTHUBMESSAGE_ABANDONED;
-// 	}
-
-// 	return result;
-// }
-
-// static IOTHUBMESSAGE_DISPOSITION_RESULT
-// upstream_msg(IOTHUB_MODULE_CLIENT_LL_HANDLE client_handle,
-// 	    IOTHUB_MESSAGE_HANDLE recv_msghandle,
-// 	    struct iotmsg *recv_msg,
-// 	    char *outputq)
-// {
-// 	struct iotmsg *msg;
-// 	int nbytes;
-// 	IOTHUB_MESSAGE_HANDLE msg_handle;
-// 	IOTHUBMESSAGE_DISPOSITION_RESULT result;
-
-// 	/*
-// 	 * Space will be freed by the send callback
-// 	 */
-// 	msg = malloc(sizeof(*msg));
-// 	if (msg) {
-// 		memset(msg, 0, sizeof(*msg));
-// 		nbytes = snprintf(msg->strbuf.buf, UPSTREAM_MSG_SIZE, "msg_id %d", recv_msg->ts.id);
-
-// 		logmsg("upstream msg %s\n", msg->strbuf.buf);
-
-// 		msg_handle = IoTHubMessage_CreateFromByteArray((unsigned char *)msg,
-// 						nbytes);
-// 		msg->handle = msg_handle;
-// 		result = send_iotmsg(client_handle, msg_handle, outputq, msg);
-// 	} else {
-// 		result = IOTHUBMESSAGE_ABANDONED;
-// 	}
-// 	return result;
-// }
 
 static IOTHUBMESSAGE_DISPOSITION_RESULT
 InputQueue1Callback(IOTHUB_MESSAGE_HANDLE recv_msghandle,
@@ -338,16 +199,6 @@ InputQueue1Callback(IOTHUB_MESSAGE_HANDLE recv_msghandle,
 		logmsg("Bad received message\n");
 	}
 
-	/*
-	 * If we started the circle of pings, then we break the chain and
-	 * don't forward the message onward
-	 */
-	// if (recv_msg) {
-	// 	if (g_startping == 0)
-	// 		result = forward_msg(client_handle, recv_msghandle, recv_msg, "output1");
-	// 	else if (g_upstream)
-	// 		result = upstream_msg(client_handle, recv_msghandle, recv_msg, "output2");
-	// }
 	return result;
 }
 
@@ -482,7 +333,6 @@ iothub_module()
 					goto out;
 				}
 			}
-		// }
 	}
 
 out:
